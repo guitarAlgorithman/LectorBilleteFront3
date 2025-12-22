@@ -1,0 +1,212 @@
+:root {
+  --primary: #0353a4;
+  --primary-dark: #023e7d;
+  --success: #2a9d8f;
+  --danger: #d62828;
+  --bg: #f7f9fc;
+  --card-bg: #ffffff;
+  --text: #1e212a;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: "Inter", Arial, sans-serif;
+  color: var(--text);
+}
+
+.app-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1rem;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 1.05rem;
+  color: #555;
+  margin-bottom: 2rem;
+}
+
+/* Switch de modo */
+.mode-switch {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.mode-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary-dark);
+}
+
+/* Upload / cámara */
+.upload-section,
+.camera-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.camera-section .webcam-view {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Botones */
+button {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 500;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: #d1d5db;
+}
+
+/* Crop */
+.crop-container {
+  margin: 1.5rem 0;
+}
+
+.crop-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  height: 320px;
+  margin: 0 auto;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.crop-controls {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  align-items: center;
+}
+
+.crop-controls input[type="range"] {
+  width: 200px;
+}
+
+/* Preview única del billete */
+.preview {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 700px;
+  margin: 0 auto 0.75rem auto;
+}
+
+.preview img {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón analizar */
+.actions {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Resultado */
+.result-card {
+  margin-top: 1.5rem;
+  border-radius: 12px;
+  background: var(--card-bg);
+  padding: 2rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+  text-align: center;
+}
+
+.result-card h2 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.result-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.result-value.apto {
+  color: var(--success);
+}
+
+.result-value.no-apto {
+  color: var(--danger);
+}
+
+.detail {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Error */
+.error {
+  max-width: 600px;
+  margin: 1rem auto;
+  background: var(--danger);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  text-align: center;
+}
