@@ -4,24 +4,24 @@ import Cropper from "react-easy-crop";
 import "./App.css";
 import { getCroppedImg } from "./utils/cropImage";
 
+// ✅ desde .env (Vite)
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/predict";
-const BILLETE_ASPECT = 2.11;
-
-// ⚠️ Simple. NO es seguridad real. Solo freno básico.
-const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || "1234";
+const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || ""; // si está vacío, no bloquea
 const COOLDOWN_SECONDS = Number(import.meta.env.VITE_COOLDOWN_SECONDS || 5);
 
-export default function App() {
-  const [mode, setMode] = useState("upload"); // 'upload' | 'camera'
-  const [rawImage, setRawImage] = useState(null); // dataURL original
-  const [croppedImage, setCroppedImage] = useState(null); // dataURL recortado
+const BILLETE_ASPECT = 2.11;
+
+function App() {
+  const [mode, setMode] = useState("upload");
+  const [rawImage, setRawImage] = useState(null);
+  const [croppedImage, setCroppedImage] = useState(null);
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   const webcamRef = useRef(null);
 
-  // crop states
+  // crop
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1.5);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
@@ -31,27 +31,25 @@ export default function App() {
   const [unlocked, setUnlocked] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0);
 
-  const onCropComplete = (_, areaPixels) => setCroppedAreaPixels(areaPixels);
+  const accessRequired = (ACCESS_CODE || "").trim().length > 0;
 
-  const resetAll = () => {
+  const onCropComplete = (_, areaPixels) => {
+    setCroppedAreaPixels(areaPixels);
+  };
+
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
     setRawImage(null);
     setCroppedImage(null);
     setResult(null);
     setErrorMsg("");
     setCrop({ x: 0, y: 0 });
     setZoom(1.5);
-    setCroppedAreaPixels(null);
-  };
-
-  const handleModeChange = (newMode) => {
-    setMode(newMode);
-    resetAll();
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setResult(null);
     setErrorMsg("");
     setCroppedImage(null);
@@ -66,15 +64,14 @@ export default function App() {
   const handleCaptureFromCamera = () => {
     if (!webcamRef.current) return;
     const screenshot = webcamRef.current.getScreenshot();
-    if (!screenshot) return;
-
-    setRawImage(screenshot);
-    setCroppedImage(null);
-    setResult(null);
-    setErrorMsg("");
-    setCrop({ x: 0, y: 0 });
-    setZoom(1.5);
-    setCroppedAreaPixels(null);
+    if (screenshot) {
+      setRawImage(screenshot);
+      setCroppedImage(null);
+      setResult(null);
+      setErrorMsg("");
+      setCrop({ x: 0, y: 0 });
+      setZoom(1.5);
+    }
   };
 
   const handleApplyCrop = async () => {
@@ -92,7 +89,7 @@ export default function App() {
     }
   };
 
-  // ✅ contador cooldown
+  // ✅ cooldown timer
   useEffect(() => {
     if (cooldownLeft <= 0) return;
     const t = setInterval(() => {
@@ -101,7 +98,17 @@ export default function App() {
     return () => clearInterval(t);
   }, [cooldownLeft]);
 
+  // ✅ si NO hay ACCESS_CODE en env, desbloquea automáticamente
+  useEffect(() => {
+    if (!accessRequired) setUnlocked(true);
+  }, [accessRequired]);
+
   const handleUnlock = () => {
+    if (!accessRequired) {
+      setUnlocked(true);
+      setErrorMsg("");
+      return;
+    }
     if (accessInput.trim() === ACCESS_CODE) {
       setUnlocked(true);
       setErrorMsg("");
@@ -112,7 +119,7 @@ export default function App() {
   };
 
   const handlePredict = async () => {
-    if (!unlocked) {
+    if (accessRequired && !unlocked) {
       setErrorMsg("Ingresa la clave para analizar.");
       return;
     }
@@ -134,7 +141,6 @@ export default function App() {
 
       const dataUrl = croppedImage || rawImage;
       const base64 = dataUrl.split(",")[1];
-      if (!base64) throw new Error("No se pudo extraer base64 desde la imagen.");
 
       const response = await fetch(API_URL, {
         method: "POST",
@@ -142,24 +148,21 @@ export default function App() {
         body: JSON.stringify({ image_base64: base64 }),
       });
 
-      const text = await response.text();
-      let data = null;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        // respuesta no-JSON
-      }
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        const msg = data?.detail || data?.error || text || `HTTP ${response.status}`;
+        const msg =
+          data?.detail ||
+          data?.error ||
+          `Error HTTP: ${response.status}`;
         throw new Error(msg);
       }
 
       setResult(data);
-      setCooldownLeft(COOLDOWN_SECONDS); // ✅ solo si fue exitosa
+      setCooldownLeft(COOLDOWN_SECONDS);
     } catch (err) {
       console.error(err);
-      setErrorMsg(`Error: ${err?.message || "falló la consulta"}`);
+      setErrorMsg(err?.message || "Error al enviar la imagen o procesar la respuesta.");
     } finally {
       setLoading(false);
     }
@@ -169,9 +172,6 @@ export default function App() {
     if (!result) return null;
 
     const isApto = result.apto === true;
-    const aptoLabel =
-      result.apto === null ? "N/A" : isApto ? "APTO" : "NO APTO";
-
     const classApto =
       result.apto === null
         ? "result-value"
@@ -179,16 +179,17 @@ export default function App() {
         ? "result-value apto"
         : "result-value no-apto";
 
+    const aptoLabel =
+      result.apto === null ? "N/A" : isApto ? "APTO" : "NO APTO";
+
     return (
       <div className="result-card">
         <h2>Resultado del análisis</h2>
 
         <p><strong>Denominación:</strong></p>
-        <div className="result-value">
-          {result.denominacion ?? "desconocida"}
-        </div>
+        <div className="result-value">{result.denominacion ?? "ninguna"}</div>
 
-        <p><strong>Aptitud:</strong></p>
+        <p><strong>Aptitud (modelo):</strong></p>
         <div className={classApto}>{aptoLabel}</div>
 
         <p><strong>Confianza:</strong></p>
@@ -200,10 +201,16 @@ export default function App() {
 
         <div className="detail">{result.detalle ?? "-"}</div>
 
-        {/* OpenAI block */}
+        {/* OpenAI */}
         {result.openai && (
           <div className="detail" style={{ marginTop: 12 }}>
-            <strong>OpenAI ve:</strong>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <strong>OpenAI</strong>
+              {result.openai.mode && (
+                <span style={{ opacity: 0.8 }}>Modo: {result.openai.mode}</span>
+              )}
+            </div>
+
             {result.openai.ok ? (
               result.openai.data ? (
                 <div style={{ marginTop: 6 }}>
@@ -211,11 +218,6 @@ export default function App() {
                   <div><strong>¿Es billete?:</strong> {result.openai.data.es_billete ? "Sí" : "No"}</div>
                   <div><strong>Denominación estimada:</strong> {result.openai.data.denominacion_estimada}</div>
                   <div><strong>Motivos:</strong> {result.openai.data.motivos}</div>
-                  {result.openai.mode && (
-                    <div style={{ marginTop: 6, opacity: 0.8 }}>
-                      <small>Modo: {result.openai.mode}</small>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <pre style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>
@@ -234,8 +236,8 @@ export default function App() {
   };
 
   const canAnalyze =
-    unlocked &&
-    (rawImage || croppedImage) &&
+    (!accessRequired || unlocked) &&
+    rawImage &&
     !loading &&
     cooldownLeft === 0;
 
@@ -243,11 +245,12 @@ export default function App() {
     <div className="app-container">
       <h1>Detector de billetes</h1>
       <p className="subtitle">
-        Captura o sube una foto del billete, ajusta el recorte y obtén su denominación y aptitud.
+        Captura o sube una foto del billete, ajusta el recorte y obtén su
+        denominación y aptitud.
       </p>
 
       {/* 🔐 Gate simple */}
-      {!unlocked && (
+      {accessRequired && !unlocked && (
         <div className="result-card" style={{ marginBottom: 16 }}>
           <h2>Acceso</h2>
           <p className="detail">Ingresa la clave para habilitar el análisis.</p>
@@ -258,20 +261,14 @@ export default function App() {
               onChange={(e) => setAccessInput(e.target.value)}
               placeholder="Clave"
               style={{ padding: 10, flex: 1, borderRadius: 8, border: "1px solid #ccc" }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleUnlock();
-              }}
             />
             <button onClick={handleUnlock}>Entrar</button>
-          </div>
-          <div style={{ marginTop: 10, opacity: 0.8 }}>
-            <small>API: {API_URL}</small>
           </div>
         </div>
       )}
 
       {/* ⏳ Cooldown visible */}
-      {unlocked && cooldownLeft > 0 && (
+      {(!accessRequired || unlocked) && cooldownLeft > 0 && (
         <div className="detail" style={{ marginBottom: 10 }}>
           ⏳ Espera {cooldownLeft}s para volver a analizar
         </div>
@@ -310,7 +307,6 @@ export default function App() {
         </div>
       )}
 
-      {/* CROP */}
       {rawImage && !croppedImage && (
         <div className="crop-container">
           <h2>Ajusta el recorte del billete</h2>
@@ -322,7 +318,7 @@ export default function App() {
               aspect={BILLETE_ASPECT}
               onCropChange={setCrop}
               onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
+              onCropComplete={(_, areaPixels) => setCroppedAreaPixels(areaPixels)}
               cropShape="rect"
               showGrid={false}
             />
@@ -344,7 +340,6 @@ export default function App() {
         </div>
       )}
 
-      {/* PREVIEW */}
       {croppedImage && (
         <div className="preview">
           <div className="preview-header">
@@ -357,14 +352,6 @@ export default function App() {
               }}
             >
               Ajustar recorte nuevamente
-            </button>
-            <button
-              className="secondary-btn"
-              onClick={() => {
-                resetAll();
-              }}
-            >
-              Limpiar
             </button>
           </div>
           <img src={croppedImage} alt="Billete recortado" />
@@ -384,6 +371,13 @@ export default function App() {
       {errorMsg && <div className="error">{errorMsg}</div>}
 
       {renderResult()}
+
+      {/* debug mínimo */}
+      <div className="detail" style={{ marginTop: 16, opacity: 0.7 }}>
+        API: {API_URL}
+      </div>
     </div>
   );
 }
+
+export default App;
