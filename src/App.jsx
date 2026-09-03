@@ -10,6 +10,24 @@ const RESULT_LABELS = {
   REQUIERE_REVISION_PRESENCIAL: "Requiere revisión presencial",
 };
 
+const MIT_STEPS = {
+  mire: {
+    title: "Mire",
+    instruction: "Observe el billete de frente y luego a contraluz.",
+    items: ["Marca de agua", "Ventana transparente o hilo de seguridad", "Motivo coincidente", "Microtextos nítidos", "Número de serie"],
+  },
+  incline: {
+    title: "Incline",
+    instruction: "Inclínelo lenta y horizontalmente frente a la cámara.",
+    items: ["Franja 3D o efecto óptico", "Movimiento al cambiar el ángulo", "Antú o elemento que cambia de color"],
+  },
+  toque: {
+    title: "Toque",
+    instruction: "Esta comprobación debe realizarla usted: el teléfono no puede sentir el material.",
+    items: ["Material firme o suave según la denominación", "Textura distinta del papel común", "Impresión en relieve en el anverso"],
+  },
+};
+
 function stripDataUrl(value) {
   return value?.includes(",") ? value.split(",", 2)[1] : value;
 }
@@ -25,6 +43,9 @@ function App() {
   const [error, setError] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [locationMessage, setLocationMessage] = useState("");
+  const [mitStep, setMitStep] = useState("mire");
+  const [mitChecks, setMitChecks] = useState({});
+  const [denomination, setDenomination] = useState("");
 
   const city = useMemo(
     () => exchangeCenters.find((entry) => entry.city === selectedCity),
@@ -106,6 +127,14 @@ function App() {
   };
 
   const resultClass = result?.resultado?.toLowerCase().replaceAll("_", "-") || "";
+  const checkedCount = Object.values(mitChecks).filter(Boolean).length;
+  const totalMitItems = Object.values(MIT_STEPS).reduce((total, step) => total + step.items.length, 0);
+  const mitSummary = checkedCount === 0 ? "Sin revisar" : checkedCount === totalMitItems ? "Revisión guiada completa" : "Revisión guiada incompleta";
+
+  const toggleMitCheck = (step, item) => {
+    const key = `${step}:${item}`;
+    setMitChecks((current) => ({ ...current, [key]: !current[key] }));
+  };
 
   return (
     <main className="app-shell">
@@ -171,6 +200,54 @@ function App() {
           <p className="legal-copy">{result.advertencia_legal}</p>
         </section>
       )}
+
+      <section className="mit-card">
+        <span className="eyebrow">Guía educativa de seguridad</span>
+        <h2>Mire, Incline y Toque</h2>
+        <p className="mit-intro">Siga el método MIT del Banco Central y registre lo que usted logra observar. Esta guía no declara que un billete sea auténtico o falso.</p>
+
+        <div className="denomination-row">
+          <label htmlFor="denomination">Denominación que está revisando</label>
+          <select id="denomination" value={denomination} onChange={(event) => setDenomination(event.target.value)}>
+            <option value="">Seleccionar</option>
+            {[1000, 2000, 5000, 10000, 20000].map((value) => <option key={value} value={value}>${value.toLocaleString("es-CL")}</option>)}
+          </select>
+        </div>
+
+        <div className="mit-tabs" role="tablist" aria-label="Pasos del método MIT">
+          {Object.entries(MIT_STEPS).map(([key, step]) => (
+            <button key={key} role="tab" aria-selected={mitStep === key} className={mitStep === key ? "active" : ""} onClick={() => setMitStep(key)}>
+              {step.title}
+            </button>
+          ))}
+        </div>
+
+        <div className={`mit-step mit-${mitStep}`}>
+          <div className="mit-step-heading">
+            <span>{mitStep === "mire" ? "01" : mitStep === "incline" ? "02" : "03"}</span>
+            <div><h3>{MIT_STEPS[mitStep].title}</h3><p>{MIT_STEPS[mitStep].instruction}</p></div>
+          </div>
+          {mitStep === "incline" && <div className="tilt-demo" aria-hidden="true"><div className="mini-bill">↔</div><span>Muévalo lentamente; no basta una foto fija</span></div>}
+          {mitStep === "mire" && <div className="light-tip">Consejo: para la marca de agua, use una fuente de luz detrás del billete.</div>}
+          {mitStep === "toque" && <div className="touch-warning">No verificable por GPT ni por la cámara. Marque solo lo que usted compruebe al tacto.</div>}
+          <div className="mit-checklist">
+            {MIT_STEPS[mitStep].items.map((item) => {
+              const key = `${mitStep}:${item}`;
+              return <label key={item} className={mitChecks[key] ? "checked" : ""}>
+                <input type="checkbox" checked={Boolean(mitChecks[key])} onChange={() => toggleMitCheck(mitStep, item)} />
+                <span>{item}</span><strong>{mitChecks[key] ? "Observado" : "No marcado"}</strong>
+              </label>;
+            })}
+          </div>
+        </div>
+
+        <div className="mit-summary">
+          <div><span>Registro MIT</span><strong>{mitSummary}</strong></div>
+          <span>{checkedCount} de {totalMitItems} elementos marcados</span>
+        </div>
+        <p className="legal-copy">Los elementos marcados corresponden a observaciones del usuario. No constituyen una autentificación, un peritaje ni una garantía de aceptación o canje.</p>
+        <a className="source-link" href="https://www.billetesymonedas.cl/Seguridad/ElementosSeguridaBilletes" target="_blank" rel="noreferrer">Consultar método MIT oficial</a>
+      </section>
 
       <section className="locations">
         <span className="eyebrow">Revisión presencial</span>
