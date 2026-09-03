@@ -44,6 +44,7 @@ function App() {
   const [selectedCity, setSelectedCity] = useState("");
   const [locationMessage, setLocationMessage] = useState("");
   const [mitStep, setMitStep] = useState("mire");
+  const [mitItemIndex, setMitItemIndex] = useState(0);
   const [mitChecks, setMitChecks] = useState({});
   const [denomination, setDenomination] = useState("");
 
@@ -136,6 +137,23 @@ function App() {
     setMitChecks((current) => ({ ...current, [key]: !current[key] }));
   };
 
+  const mitStepKeys = Object.keys(MIT_STEPS);
+  const activeMitItems = MIT_STEPS[mitStep].items;
+  const activeMitItem = activeMitItems[mitItemIndex] || activeMitItems[0];
+  const moveMitGuide = (direction) => {
+    const nextItem = mitItemIndex + direction;
+    if (nextItem >= 0 && nextItem < activeMitItems.length) {
+      setMitItemIndex(nextItem);
+      return;
+    }
+    const stepIndex = mitStepKeys.indexOf(mitStep);
+    const nextStep = stepIndex + direction;
+    if (nextStep >= 0 && nextStep < mitStepKeys.length) {
+      setMitStep(mitStepKeys[nextStep]);
+      setMitItemIndex(direction > 0 ? 0 : MIT_STEPS[mitStepKeys[nextStep]].items.length - 1);
+    }
+  };
+
   return (
     <main className="app-shell">
       <header className="hero">
@@ -150,6 +168,7 @@ function App() {
 
       <nav className="mode-tabs" aria-label="Modo de captura">
         <button className={mode === "ar" ? "active" : ""} onClick={() => setMode("ar")}>Escáner AR</button>
+        <button className={mode === "mit" ? "active" : ""} onClick={() => setMode("mit")}>Guía MIT AR</button>
         <button className={mode === "upload" ? "active" : ""} onClick={() => setMode("upload")}>Subir fotos</button>
       </nav>
 
@@ -159,12 +178,23 @@ function App() {
           <button className={activeSide === "back" ? "active" : ""} onClick={() => setActiveSide("back")}>2. Reverso {backImage && "✓"}</button>
         </div>
 
-        {mode === "ar" ? (
+        {mode !== "upload" ? (
           <div className="camera-stage">
             <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" screenshotQuality={0.9} videoConstraints={{ facingMode: { ideal: "environment" } }} />
             <div className="ar-shade" />
-            <div className="bill-guide"><span>{activeSide === "front" ? "Alinea el anverso" : "Alinea el reverso"}</span></div>
-            {result && <div className={`ar-result ${resultClass}`}>{RESULT_LABELS[result.resultado]}</div>}
+            <div className={`bill-guide ${mode === "mit" ? `guide-${mitStep}` : ""}`}><span>{mode === "mit" ? "Mantenga el billete dentro del marco" : activeSide === "front" ? "Alinea el anverso" : "Alinea el reverso"}</span></div>
+            {mode === "mit" ? (
+              <div className="mit-ar-overlay">
+                <div className="mit-ar-top"><strong>{MIT_STEPS[mitStep].title}</strong><span>{mitItemIndex + 1}/{activeMitItems.length}</span></div>
+                {mitStep === "incline" && <div className="arrows" aria-hidden="true">← Incline lentamente →</div>}
+                {mitStep === "mire" && <div className="target-pulse" aria-hidden="true" />}
+                <div className="mit-ar-instruction">
+                  <small>{MIT_STEPS[mitStep].instruction}</small>
+                  <strong>{activeMitItem}</strong>
+                  {mitStep === "toque" && <em>Compruébelo con sus dedos; la cámara no puede detectarlo.</em>}
+                </div>
+              </div>
+            ) : result && <div className={`ar-result ${resultClass}`}>{RESULT_LABELS[result.resultado]}</div>}
           </div>
         ) : (
           <label className="drop-zone">
@@ -175,6 +205,11 @@ function App() {
         )}
 
         {mode === "ar" && <button className="primary capture-button" onClick={capture}>Capturar {activeSide === "front" ? "anverso" : "reverso"}</button>}
+        {mode === "mit" && <div className="mit-ar-controls">
+          <button onClick={() => moveMitGuide(-1)} disabled={mitStep === "mire" && mitItemIndex === 0}>Anterior</button>
+          <button className={mitChecks[`${mitStep}:${activeMitItem}`] ? "observed" : ""} onClick={() => toggleMitCheck(mitStep, activeMitItem)}>{mitChecks[`${mitStep}:${activeMitItem}`] ? "✓ Observado" : "Marcar observado"}</button>
+          <button onClick={() => moveMitGuide(1)} disabled={mitStep === "toque" && mitItemIndex === activeMitItems.length - 1}>Siguiente</button>
+        </div>}
 
         <div className="previews">
           <Preview label="Anverso" image={frontImage} onClear={() => setFrontImage(null)} />

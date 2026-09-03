@@ -25,6 +25,24 @@ button { cursor: pointer; }
 .bill-guide::after { right: -5px; bottom: -5px; border-right: 5px solid; border-bottom: 5px solid; border-radius: 0 0 10px; }
 .bill-guide span { position: absolute; left: 50%; bottom: -40px; transform: translateX(-50%); color: white; white-space: nowrap; font-weight: 800; }
 .ar-result { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: 90%; padding: 10px 15px; border-radius: 999px; background: white; font-weight: 900; }
+.mit-ar-overlay { position: absolute; inset: 0; pointer-events: none; color: white; }
+.mit-ar-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; }
+.mit-ar-top strong { padding: 8px 13px; border-radius: 999px; background: #147856; text-transform: uppercase; letter-spacing: .08em; }
+.mit-ar-top span { padding: 7px 10px; border-radius: 999px; background: rgba(0,0,0,.65); font-weight: 900; }
+.mit-ar-instruction { position: absolute; left: 12px; right: 12px; bottom: 12px; display: grid; gap: 4px; padding: 12px 14px; border-radius: 13px; background: rgba(5,24,18,.88); backdrop-filter: blur(8px); }
+.mit-ar-instruction small { color: #bfe8d5; }
+.mit-ar-instruction strong { font-size: clamp(1rem, 3vw, 1.25rem); }
+.mit-ar-instruction em { color: #ffd997; font-size: .78rem; font-style: normal; }
+.arrows { position: absolute; top: 45%; left: 50%; transform: translate(-50%,-50%); width: max-content; padding: 9px 14px; border-radius: 999px; background: rgba(10,49,36,.8); font-weight: 900; animation: slideHint 1.7s ease-in-out infinite; }
+.target-pulse { position: absolute; top: 35%; left: 27%; width: 42px; height: 42px; border: 3px solid #fff3a3; border-radius: 50%; box-shadow: 0 0 0 0 rgba(255,243,163,.65); animation: pulseTarget 1.5s infinite; }
+.guide-incline { border-color: #ffd66f; }
+.guide-toque { border-color: #84c8ff; }
+.mit-ar-controls { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; margin-top: 14px; }
+.mit-ar-controls button { border: 1px solid #b9ccc1; border-radius: 11px; background: white; color: #284a3e; padding: 11px 8px; font-weight: 800; }
+.mit-ar-controls button.observed { background: #147856; border-color: #147856; color: white; }
+.mit-ar-controls button:disabled { opacity: .4; cursor: not-allowed; }
+@keyframes slideHint { 0%,100% { transform: translate(-55%,-50%); } 50% { transform: translate(-45%,-50%); } }
+@keyframes pulseTarget { 70% { box-shadow: 0 0 0 18px rgba(255,243,163,0); } 100% { box-shadow: 0 0 0 0 rgba(255,243,163,0); } }
 .primary { border: 0; border-radius: 12px; background: #147856; color: white; font-weight: 800; padding: 13px 18px; }
 .primary:hover { background: #0e5f43; }
 .primary:disabled { cursor: not-allowed; opacity: .45; }
@@ -90,4 +108,4 @@ button { cursor: pointer; }
 .mit-summary { display: flex; justify-content: space-between; gap: 15px; align-items: center; margin-top: 16px; padding: 14px; border-radius: 12px; background: #123f31; color: white; }
 .mit-summary div { display: grid; gap: 2px; }
 .mit-summary div span, .mit-summary > span { color: #bdd8ce; font-size: .82rem; }
-@media (max-width: 620px) { .app-shell { width: min(100% - 18px, 920px); padding-top: 24px; } .capture-card, .result-card, .mit-card, .locations { border-radius: 18px; } .previews, .result-grid { grid-template-columns: 1fr; } .location-controls, .denomination-row, .mit-summary { flex-direction: column; align-items: stretch; } .center-list article { align-items: flex-start; } .mit-checklist label { grid-template-columns: auto 1fr; } .mit-checklist strong { grid-column: 2; } }
+@media (max-width: 620px) { .app-shell { width: min(100% - 18px, 920px); padding-top: 24px; } .capture-card, .result-card, .mit-card, .locations { border-radius: 18px; } .previews, .result-grid { grid-template-columns: 1fr; } .location-controls, .denomination-row, .mit-summary { flex-direction: column; align-items: stretch; } .center-list article { align-items: flex-start; } .mit-checklist label { grid-template-columns: auto 1fr; } .mit-checklist strong { grid-column: 2; } .mode-tabs { flex-wrap: wrap; } .mit-ar-controls { grid-template-columns: 1fr 1fr; } .mit-ar-controls button:nth-child(2) { grid-column: 1 / -1; grid-row: 1; } }
