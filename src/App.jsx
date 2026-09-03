@@ -3,6 +3,7 @@ import Webcam from "react-webcam";
 import "./App.css";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/analyze").replace(/\/analyze$/, "/analyze-security");
+const VIEW_API_URL = API_URL.replace(/\/analyze-security$/, "/analyze-security-view");
 const SOURCE = "https://www.billetesymonedas.cl/Seguridad/ElementosSeguridaBilletes";
 
 const DENOMINATIONS = {
@@ -31,6 +32,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [includeUv, setIncludeUv] = useState(false);
+  const [viewResults, setViewResults] = useState({});
+  const [viewLoading, setViewLoading] = useState(false);
 
   const bill = DENOMINATIONS[denomination];
   const steps = includeUv ? [...BASE_STEPS, { id: "uv", title: "Luz UV", label: "Captura UV" }] : BASE_STEPS;
@@ -53,30 +56,49 @@ export default function App() {
   }), [isPolymer]);
 
   const chooseBill = (value) => {
-    setDenomination(value); setStepIndex(0); setCaptures({}); setResult(null); setError("");
+    setDenomination(value); setStepIndex(0); setCaptures({}); setViewResults({}); setResult(null); setError("");
   };
 
-  const capture = () => {
+  const capture = async () => {
     const image = webcamRef.current?.getScreenshot();
     if (!image) return;
     setCaptures((current) => ({ ...current, [step.id]: image }));
     setResult(null);
-    if (stepIndex < steps.length - 1) setStepIndex(stepIndex + 1);
-  };
-
-  const analyze = async () => {
-    setLoading(true); setError(""); setResult(null);
+    if (step.id === "tiltLeft") {
+      setViewResults((current) => ({ ...current, tiltLeft: { waiting: true } }));
+      if (stepIndex < steps.length - 1) setStepIndex(stepIndex + 1);
+      return;
+    }
+    const view = step.id === "tiltRight" ? "tilt" : step.id;
+    setViewLoading(true); setError("");
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(VIEW_API_URL, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ denomination, normal_image_base64: strip(captures.normal), backlight_image_base64: strip(captures.backlight) || null, tilt_left_image_base64: strip(captures.tiltLeft) || null, tilt_right_image_base64: strip(captures.tiltRight) || null, uv_image_base64: includeUv ? strip(captures.uv) || null : null }),
+        body: JSON.stringify({ denomination, view, image_base64: strip(image), reference_image_base64: step.id === "tiltRight" ? strip(captures.tiltLeft) || null : null }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.detail || `Error HTTP ${response.status}`);
-      setResult(payload);
-    } catch (requestError) { setError(requestError.message || "No fue posible revisar las capturas."); }
-    finally { setLoading(false); }
+      setViewResults((current) => ({ ...current, [step.id]: payload }));
+      if (stepIndex < steps.length - 1) setStepIndex(stepIndex + 1);
+    } catch (requestError) { setError(requestError.message || "No fue posible analizar esta vista."); }
+    finally { setViewLoading(false); }
   };
+
+  const analyze = () => {
+    setLoading(true); setError("");
+    const priority = { OBSERVADO: 3, NO_OBSERVADO: 2, NO_VERIFICABLE: 1 };
+    const merged = {};
+    Object.values(viewResults).forEach((viewResult) => viewResult?.elementos?.forEach((item) => {
+      if (!merged[item.nombre] || priority[item.estado] > priority[merged[item.nombre].estado]) merged[item.nombre] = item;
+    }));
+    const elementos = Object.values(merged);
+    setResult({ elementos, resumen: `Conclusión construida con ${elementos.length} elementos revisados en las distintas vistas.`, advertencia_legal: "Guía visual educativa. No autentifica el billete ni garantiza su aceptación o canje." });
+    setLoading(false);
+  };
+
+  const requiredIds = includeUv ? ["normal", "backlight", "tiltLeft", "tiltRight", "uv"] : ["normal", "backlight", "tiltLeft", "tiltRight"];
+  const analyzedIds = includeUv ? ["normal", "backlight", "tiltRight", "uv"] : ["normal", "backlight", "tiltRight"];
+  const readyForConclusion = requiredIds.every((id) => captures[id]) && analyzedIds.every((id) => viewResults[id]?.elementos);
 
   return <main className="app">
     <header><span className="eyebrow">Lector de Billetes 3</span><h1>MIT con cámara guiada</h1><p>Seleccione la denominación. La guía cargará solamente los elementos de seguridad que corresponden a ese billete.</p></header>
@@ -93,7 +115,7 @@ export default function App() {
 
     {bill ? <>
       <section className="elements"><h2>Presente en el billete de ${Number(denomination).toLocaleString("es-CL")}</h2><div>{bill.elements.map((item) => <span key={item}>{item}</span>)}</div></section>
-      <label className="uv-option"><input type="checkbox" checked={includeUv} onChange={(event) => { setIncludeUv(event.target.checked); setStepIndex(0); setResult(null); }} /><span><strong>¿Tiene acceso a una lámpara UV?</strong><small>Opcional. Si la activa, se agregará una captura UV; si no, no afectará el porcentaje.</small></span></label>
+      <label className="uv-option"><input type="checkbox" checked={includeUv} onChange={(event) => { setIncludeUv(event.target.checked); setStepIndex(0); setResult(null); setViewResults((current) => ({ ...current, uv: undefined })); }} /><span><strong>¿Tiene acceso a una lámpara UV?</strong><small>Opcional. Si la activa, se agregará una captura UV; si no, no afectará la conclusión.</small></span></label>
       <section className="scanner">
         <nav>{steps.map((item, index) => <button key={item.id} className={`${index === stepIndex ? "active" : ""} ${captures[item.id] ? "done" : ""}`} onClick={() => setStepIndex(index)}><b>{index + 1}</b><span>{item.label}</span></button>)}</nav>
         <div className="camera">
@@ -104,10 +126,11 @@ export default function App() {
           {step.id === "uv" && <div className="uv-glow">UV</div>}
           <div className="guide"><div><strong>{step.title}</strong><span>{step.label}</span></div><p>{hints[step.id]}</p></div>
         </div>
-        <button className="capture" onClick={capture}>{captures[step.id] ? "Repetir captura" : `Capturar: ${step.label}`}</button>
+        <button className="capture" disabled={viewLoading} onClick={capture}>{viewLoading ? "Detectando elementos…" : captures[step.id] ? "Repetir y analizar" : `Capturar y detectar: ${step.label}`}</button>
+        <div className="view-checks">{steps.map((item) => <article key={item.id}><strong>{item.label}</strong>{item.id === "tiltLeft" && viewResults.tiltLeft?.waiting ? <span className="waiting">✓ Capturada; se compara con el ángulo derecho</span> : viewResults[item.id]?.elementos?.length ? <ul>{viewResults[item.id].elementos.map((element) => <li key={element.nombre} className={element.estado.toLowerCase().replaceAll("_", "-")}><span>{element.estado === "OBSERVADO" ? "✓" : element.estado === "NO_OBSERVADO" ? "–" : "?"}</span>{element.nombre}</li>)}</ul> : <span className="waiting">Pendiente</span>}</article>)}</div>
       </section>
       <section className="touch"><strong>Toque — comprobación manual</strong><p>{isPolymer ? "Compruebe una superficie lisa, suave y resistente." : "Compruebe papel firme, resistente y con cierta aspereza."} En todos los billetes, revise el relieve del anverso con la yema de los dedos.</p></section>
-      <button className="analyze" disabled={!captures.normal || loading} onClick={analyze}>{loading ? "Comparando imágenes…" : "Buscar elementos en las capturas"}</button>
+      <button className="analyze" disabled={!readyForConclusion || loading || viewLoading} onClick={analyze}>{loading ? "Preparando conclusión…" : "Generar conclusión final"}</button>
       {error && <p className="error">{error}</p>}
     </> : <section className="empty">Seleccione una denominación para iniciar la guía.</section>}
 
