@@ -100,6 +100,7 @@ button { cursor: pointer; }
 .mini-bill { display: grid; place-items: center; width: 150px; aspect-ratio: 2 / 1; border: 3px solid #36a77e; border-radius: 8px; background: linear-gradient(110deg, #d7f0e2, #fff, #bce4ce); color: #147856; font-size: 2rem; animation: tilt 2.2s ease-in-out infinite; }
 @keyframes tilt { 0%,100% { transform: perspective(300px) rotateY(-18deg); } 50% { transform: perspective(300px) rotateY(18deg); } }
 .mit-checklist { display: grid; gap: 8px; margin-top: 18px; }
+.mit-empty { margin: 0; padding: 14px; border: 1px dashed #a8beb2; border-radius: 11px; color: #536a62; background: white; }
 .mit-checklist label { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 12px; background: white; border: 1px solid #d5e1da; border-radius: 11px; cursor: pointer; }
 .mit-checklist label.checked { border-color: #3aa67e; background: #effaf5; }
 .mit-checklist input { width: 19px; height: 19px; accent-color: #147856; }

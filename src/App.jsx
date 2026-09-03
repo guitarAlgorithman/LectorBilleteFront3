@@ -28,6 +28,14 @@ const MIT_STEPS = {
   },
 };
 
+const MIT_ITEMS_BY_DENOMINATION = {
+  "1000": { mire: ["Ventana transparente", "Hilo de seguridad", "Motivo coincidente", "Microtextos nítidos", "Número de serie"], incline: ["Antú o elemento que cambia de color"], toque: ["Material polímero: liso, suave y resistente", "Impresión en relieve en el anverso"] },
+  "2000": { mire: ["Ventana transparente", "Hilo de seguridad", "Motivo coincidente", "Microtextos nítidos", "Número de serie"], incline: ["Antú o elemento que cambia de color"], toque: ["Material polímero: liso, suave y resistente", "Impresión en relieve en el anverso"] },
+  "5000": { mire: ["Ventana transparente", "Hilo de seguridad", "Motivo coincidente", "Microtextos nítidos", "Número de serie"], incline: ["Antú o elemento que cambia de color"], toque: ["Material polímero: liso, suave y resistente", "Impresión en relieve en el anverso"] },
+  "10000": { mire: ["Marca de agua", "Hilo de seguridad", "Motivo coincidente", "Microtextos nítidos", "Número de serie"], incline: ["Franja 3D", "Efecto óptico variable"], toque: ["Material de algodón: firme y con cierta aspereza", "Impresión en relieve en el anverso"] },
+  "20000": { mire: ["Marca de agua", "Hilo de seguridad", "Motivo coincidente", "Microtextos nítidos", "Número de serie"], incline: ["Franja 3D", "Efecto óptico variable"], toque: ["Material de algodón: firme y con cierta aspereza", "Impresión en relieve en el anverso"] },
+};
+
 function stripDataUrl(value) {
   return value?.includes(",") ? value.split(",", 2)[1] : value;
 }
@@ -128,9 +136,11 @@ function App() {
   };
 
   const resultClass = result?.resultado?.toLowerCase().replaceAll("_", "-") || "";
+  const denominationMit = MIT_ITEMS_BY_DENOMINATION[denomination] || null;
+  const currentMitItems = denominationMit?.[mitStep] || [];
   const checkedCount = Object.values(mitChecks).filter(Boolean).length;
-  const totalMitItems = Object.values(MIT_STEPS).reduce((total, step) => total + step.items.length, 0);
-  const mitSummary = checkedCount === 0 ? "Sin revisar" : checkedCount === totalMitItems ? "Revisión guiada completa" : "Revisión guiada incompleta";
+  const totalMitItems = denominationMit ? Object.values(denominationMit).reduce((total, items) => total + items.length, 0) : 0;
+  const mitSummary = !denomination ? "Selecciona una denominación" : checkedCount === 0 ? "Sin revisar" : checkedCount === totalMitItems ? "Revisión guiada completa" : "Revisión guiada incompleta";
 
   const toggleMitCheck = (step, item) => {
     const key = `${step}:${item}`;
@@ -138,8 +148,8 @@ function App() {
   };
 
   const mitStepKeys = Object.keys(MIT_STEPS);
-  const activeMitItems = MIT_STEPS[mitStep].items;
-  const activeMitItem = activeMitItems[mitItemIndex] || activeMitItems[0];
+  const activeMitItems = currentMitItems;
+  const activeMitItem = activeMitItems[mitItemIndex] || "Selecciona primero la denominación";
   const moveMitGuide = (direction) => {
     const nextItem = mitItemIndex + direction;
     if (nextItem >= 0 && nextItem < activeMitItems.length) {
@@ -150,7 +160,7 @@ function App() {
     const nextStep = stepIndex + direction;
     if (nextStep >= 0 && nextStep < mitStepKeys.length) {
       setMitStep(mitStepKeys[nextStep]);
-      setMitItemIndex(direction > 0 ? 0 : MIT_STEPS[mitStepKeys[nextStep]].items.length - 1);
+      setMitItemIndex(direction > 0 ? 0 : (denominationMit?.[mitStepKeys[nextStep]]?.length || 1) - 1);
     }
   };
 
@@ -185,7 +195,7 @@ function App() {
             <div className={`bill-guide ${mode === "mit" ? `guide-${mitStep}` : ""}`}><span>{mode === "mit" ? "Mantenga el billete dentro del marco" : activeSide === "front" ? "Alinea el anverso" : "Alinea el reverso"}</span></div>
             {mode === "mit" ? (
               <div className="mit-ar-overlay">
-                <div className="mit-ar-top"><strong>{MIT_STEPS[mitStep].title}</strong><span>{mitItemIndex + 1}/{activeMitItems.length}</span></div>
+                <div className="mit-ar-top"><strong>{MIT_STEPS[mitStep].title}</strong><span>{denomination ? `${mitItemIndex + 1}/${activeMitItems.length}` : "Seleccione $"}</span></div>
                 {mitStep === "incline" && <div className="arrows" aria-hidden="true">← Incline lentamente →</div>}
                 {mitStep === "mire" && <div className="target-pulse" aria-hidden="true" />}
                 <div className="mit-ar-instruction">
@@ -206,9 +216,9 @@ function App() {
 
         {mode === "ar" && <button className="primary capture-button" onClick={capture}>Capturar {activeSide === "front" ? "anverso" : "reverso"}</button>}
         {mode === "mit" && <div className="mit-ar-controls">
-          <button onClick={() => moveMitGuide(-1)} disabled={mitStep === "mire" && mitItemIndex === 0}>Anterior</button>
-          <button className={mitChecks[`${mitStep}:${activeMitItem}`] ? "observed" : ""} onClick={() => toggleMitCheck(mitStep, activeMitItem)}>{mitChecks[`${mitStep}:${activeMitItem}`] ? "✓ Observado" : "Marcar observado"}</button>
-          <button onClick={() => moveMitGuide(1)} disabled={mitStep === "toque" && mitItemIndex === activeMitItems.length - 1}>Siguiente</button>
+          <button onClick={() => moveMitGuide(-1)} disabled={!denomination || (mitStep === "mire" && mitItemIndex === 0)}>Anterior</button>
+          <button disabled={!denomination} className={mitChecks[`${mitStep}:${activeMitItem}`] ? "observed" : ""} onClick={() => toggleMitCheck(mitStep, activeMitItem)}>{mitChecks[`${mitStep}:${activeMitItem}`] ? "✓ Observado" : "Marcar observado"}</button>
+          <button onClick={() => moveMitGuide(1)} disabled={!denomination || (mitStep === "toque" && mitItemIndex === activeMitItems.length - 1)}>Siguiente</button>
         </div>}
 
         <div className="previews">
@@ -243,7 +253,7 @@ function App() {
 
         <div className="denomination-row">
           <label htmlFor="denomination">Denominación que está revisando</label>
-          <select id="denomination" value={denomination} onChange={(event) => setDenomination(event.target.value)}>
+          <select id="denomination" value={denomination} onChange={(event) => { setDenomination(event.target.value); setMitChecks({}); setMitStep("mire"); setMitItemIndex(0); }}>
             <option value="">Seleccionar</option>
             {[1000, 2000, 5000, 10000, 20000].map((value) => <option key={value} value={value}>${value.toLocaleString("es-CL")}</option>)}
           </select>
@@ -266,7 +276,8 @@ function App() {
           {mitStep === "mire" && <div className="light-tip">Consejo: para la marca de agua, use una fuente de luz detrás del billete.</div>}
           {mitStep === "toque" && <div className="touch-warning">No verificable por GPT ni por la cámara. Marque solo lo que usted compruebe al tacto.</div>}
           <div className="mit-checklist">
-            {MIT_STEPS[mitStep].items.map((item) => {
+            {!denomination && <p className="mit-empty">Selecciona la denominación para mostrar únicamente sus elementos de seguridad.</p>}
+            {currentMitItems.map((item) => {
               const key = `${mitStep}:${item}`;
               return <label key={item} className={mitChecks[key] ? "checked" : ""}>
                 <input type="checkbox" checked={Boolean(mitChecks[key])} onChange={() => toggleMitCheck(mitStep, item)} />
@@ -278,7 +289,7 @@ function App() {
 
         <div className="mit-summary">
           <div><span>Registro MIT</span><strong>{mitSummary}</strong></div>
-          <span>{checkedCount} de {totalMitItems} elementos marcados</span>
+          <span>{denomination ? `${checkedCount} de ${totalMitItems} elementos marcados` : "La matriz cambia según el billete"}</span>
         </div>
         <p className="legal-copy">Los elementos marcados corresponden a observaciones del usuario. No constituyen una autentificación, un peritaje ni una garantía de aceptación o canje.</p>
         <a className="source-link" href="https://www.billetesymonedas.cl/Seguridad/ElementosSeguridaBilletes" target="_blank" rel="noreferrer">Consultar método MIT oficial</a>
