@@ -1,16 +1,26 @@
-# React + Vite
+# LectorBilletesFrontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React/Vite para orientar visualmente sobre el posible canje de billetes
+chilenos. Incluye carga de anverso/reverso, modo de cámara con superposición AR
+y búsqueda privada de centros de cambio.
 
-Currently, two official plugins are available:
+## Desarrollo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
 
-## React Compiler
+`VITE_API_URL` debe apuntar al endpoint `/analyze` del backend.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Railway
 
-## Expanding the ESLint configuration
+- Build command: `npm run build`
+- Start command: `npm run start`
+- Variable: `VITE_API_URL=https://tu-backend.up.railway.app/analyze`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+La ubicación se procesa exclusivamente en el navegador y no se envía al backend
+ni a OpenAI. Las direcciones se basan en la lista publicada por el Banco Central
+de Chile; la disponibilidad debe confirmarse en el enlace oficial mostrado en la
+interfaz.
